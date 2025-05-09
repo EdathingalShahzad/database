@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- inventory.html, sales.html എന്നിവയുടെ <head> ൽ ചേർക്കുക -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <style>
+        body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1, h2, h3 {
+    color: #333;
+}
+
+.nav-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 8px 16px;
+    background-color: #4CAF50;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.nav-link:hover {
+    background-color: #45a049;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #4CAF50;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input, select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sales Management</h1>
+        <a href="inventory.html" class="nav-link">Go to Inventory Page</a>
+        
+        <h2>Record New Sale</h2>
+        <form id="sales-form">
+            <div class="form-group">
+                <label for="product-select">Product:</label>
+                <select id="product-select" required>
+                    <option value="">Select a product</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="quantity">Quantity:</label>
+                <input type="number" id="quantity" min="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="total-price">Total Price (₹):</label>
+                <input type="number" id="total-price" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="sale-date">Date:</label>
+                <input type="date" id="sale-date" required>
+            </div>
+            
+            <button type="submit">Record Sale</button>
+        </form>
+        
+        <h3>Recent Sales</h3>
+        <table id="sales-history">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Total (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Sales history will be populated here -->
+            </tbody>
+        </table>
+    </div>
+    
+ <script>
+    // Initialize inventory and sales data
+let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+let sales = JSON.parse(localStorage.getItem('sales')) || [];
+
+// DOM elements
+const salesForm = document.getElementById('sales-form');
+const productSelect = document.getElementById('product-select');
+const salesHistory = document.getElementById('sales-history').getElementsByTagName('tbody')[0];
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+    renderProductDropdown();
+    renderSalesHistory();
+    
+    // Set default date to today
+    document.getElementById('sale-date').valueAsDate = new Date();
+});
+
+// Render product dropdown for sales
+function renderProductDropdown() {
+    productSelect.innerHTML = '<option value="">Select a product</option>';
+    
+    inventory.forEach((product, index) => {
+        if (product.quantity > 0) {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = `${product.name} (${product.quantity} available)`;
+            productSelect.appendChild(option);
+        }
+    });
+}
+
+// Render sales history
+function renderSalesHistory() {
+    salesHistory.innerHTML = '';
+    
+    if (sales.length === 0) {
+        const row = salesHistory.insertRow();
+        const cell = row.insertCell(0);
+        cell.colSpan = 4;
+        cell.textContent = 'No sales recorded yet.';
+        return;
+    }
+    
+    // Show only the last 10 sales
+    const recentSales = sales.slice(-10).reverse();
+    
+    recentSales.forEach(sale => {
+        const row = salesHistory.insertRow();
+        
+        row.insertCell(0).textContent = sale.date;
+        row.insertCell(1).textContent = sale.productName;
+        row.insertCell(2).textContent = sale.quantity;
+        row.insertCell(3).textContent = sale.totalPrice.toFixed(2);
+    });
+}
+
+// Handle sales form submission
+salesForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const productIndex = parseInt(productSelect.value);
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const totalPrice = parseFloat(document.getElementById('total-price').value);
+    const date = document.getElementById('sale-date').value;
+    
+    if (productIndex < 0 || productIndex >= inventory.length) {
+        alert('Please select a valid product.');
+        return;
+    }
+    
+    const product = inventory[productIndex];
+    
+    if (quantity > product.quantity) {
+        alert(`Not enough stock. Only ${product.quantity} available.`);
+        return;
+    }
+    
+    // Update inventory
+    product.quantity -= quantity;
+    
+    // Record sale
+    sales.push({
+        productIndex: productIndex,
+        productName: product.name,
+        quantity: quantity,
+        totalPrice: totalPrice,
+        date: date
+    });
+    
+    // Save to localStorage
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    localStorage.setItem('sales', JSON.stringify(sales));
+    
+    // Refresh displays
+    renderProductDropdown();
+    renderSalesHistory();
+    
+    // Reset form
+    salesForm.reset();
+    document.getElementById('sale-date').valueAsDate = new Date();
+    
+    alert('Sale recorded successfully!');
+});
+
+// Auto-calculate total price when quantity changes
+document.getElementById('quantity').addEventListener('input', function() {
+    const productIndex = parseInt(productSelect.value);
+    const quantity = parseInt(this.value) || 0;
+    
+    if (productIndex >= 0 && productIndex < inventory.length) {
+        const product = inventory[productIndex];
+        document.getElementById('total-price').value = (quantity * product.price).toFixed(2);
+    }
+});
+
+// ഉൽപ്പന്നങ്ങൾ ലോഡ് ചെയ്യുക
+ഡാറ്റാബേസ്.ഉൽപ്പന്നങ്ങൾ_ലോഡ്_ചെയ്യുക((ഉൽപ്പന്നങ്ങൾ) => {
+    // ടേബിൾ പ്രദർശിപ്പിക്കുക
+    ഉൽപ്പന്നങ്ങൾ_പ്രദർശിപ്പിക്കുക(ഉൽപ്പന്നങ്ങൾ);
+});
+
+// ഫോം സബ്മിറ്റ്
+document.getElementById('ഉൽപ്പന്ന-ഫോം').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const പേര് = document.getElementById('പേര്').value;
+    const അളവ് = parseInt(document.getElementById('അളവ്').value);
+    const വില = parseFloat(document.getElementById('വില').value);
+    
+    ഡാറ്റാബേസ്.ഉൽപ്പന്നം_ചേർക്കുക(പേര്, അളവ്, വില)
+        .then(() => this.reset())
+        .catch(error => alert('പിശക്: ' + error.message));
+});
+ </script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Login Page</title>
+          <!-- Firebase SDK ചേർക്കുക -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 10px;
+        }
+
+        .login-container {
+            background-color: rgba(247, 39, 39, 0.56);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 10px groove black;
+        }
+
+        .login-container h2 {
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .login-container input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        .login-container button {
+            width: 100%;
+            padding: 12px;
+            background-color: #000000;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .login-container button:hover {
+            background-color: #34be02;
+        }
+
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .success-message {
+            color: rgb(0, 255, 0);
+            margin-top: 10px;
+        }
+
+        .forgot-password {
+            color: #000000;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .forgot-password:hover {
+            text-decoration: underline;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-container img {
+            height: 80px;
+            width: auto;
+        }
+
+        @media (min-width: 768px) {
+            .login-container {
+                padding: 40px;
+                max-width: 500px;
+            }
+            .login-container h2 {
+                font-size: 32px;
+            }
+            .login-container input,
+            .login-container button {
+                font-size: 18px;
+            }
+            .logo-container img {
+                height: 100px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="logo-container">
+            <img src="./C-_Users_USER_Downloads_FI-LOGO.png" alt="Company Logo">
+        </div>
+        
+        <div class="login-container">
+            <h2>Login</h2>
+            <input type="text" id="userId" placeholder="Enter ID" required><br>
+            <input type="password" id="password" placeholder="Enter Password" required><br>
+            <button onclick="checkLogin()">Login</button>
+
+            <p id="error-message" class="error-message"></p>
+            <p id="success-message" class="success-message"></p>
+
+            <a href="#" class="forgot-password">Forgot Password?</a>
+        </div>
+    </div>
+
+    <script>
+        // User credentials and their respective redirect pages
+        const userDatabase = {
+            "admin": {
+                password: "shaff1212@",
+                redirect: "admin-dashboard.html"
+            },
+            "shahzad": {
+                password: "pass123",
+                redirect: "shahzad-profile.html"
+            },
+            "user1": {
+                password: "user1123",
+                redirect: "user-dashboard.html"
+            },
+            "guest": {
+                password: "guest123",
+                redirect: "guest-welcome.html"
+            }
+        };
+
+        function checkLogin() {
+            const enteredId = document.getElementById("userId").value.trim();
+            const enteredPassword = document.getElementById("password").value;
+            
+            document.getElementById("error-message").textContent = "";
+            document.getElementById("success-message").textContent = "";
+
+            if (!enteredId || !enteredPassword) {
+                document.getElementById("error-message").textContent = "Both fields are required.";
+                return;
+            }
+
+            const user = userDatabase[enteredId.toLowerCase()];
+            
+            if (user && enteredPassword === user.password) {
+                localStorage.setItem("loggedIn", true);
+                localStorage.setItem("userId", enteredId);
+                document.getElementById("success-message").textContent = "Login Successful! Redirecting...";
+                
+                setTimeout(function() {
+                    window.location.href = user.redirect;
+                }, 1500);
+            } else {
+                document.getElementById("error-message").textContent = "Incorrect Username or Password.";
+            }
+        }
+
+        // Check if already logged in
+        window.onload = function() {
+            if (localStorage.getItem("loggedIn")) {
+                const userId = localStorage.getItem("userId");
+                const redirectPage = userDatabase[userId]?.redirect || "home.html";
+                window.location.href = redirectPage;
+            }
+        };
+
+        // Allow login on Enter key press
+        document.getElementById("password").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") {
+                checkLogin();
+            }
+        });
+
+// ഡാറ്റ എഴുതാൻ
+function addProduct(name, quantity, price) {
+  db.collection("products").add({
+    name: name,
+    quantity: quantity,
+    price: price
+  })
+  .then(() => alert("ഉൽപ്പന്നം ചേർത്തു!"))
+  .catch(error => alert("പിശക്: " + error));
+}
+
+// ഡാറ്റ വായിക്കാൻ (റിയൽ-ടൈം അപ്ഡേറ്റ്)
+db.collection("products").onSnapshot((snapshot) => {
+  snapshot.forEach((doc) => {
+    console.log(doc.data()); // ഉൽപ്പന്നങ്ങൾ കാണിക്കും
+  });
+});
+
+
+  
+
+
+ const firebaseConfig = {
+  apiKey: "AIzaSyCJ7QTkexGd6jNJvJHsl2Mw7iGcHVhwZAw",
+  authDomain: "shaffrose-c-panel.firebaseapp.com",
+  databaseURL: "https://shaffrose-c-panel-default-rtdb.firebaseio.com",
+  projectId: "shaffrose-c-panel",
+  storageBucket: "shaffrose-c-panel.firebasestorage.app",
+  messagingSenderId: "404610535834",
+  appId: "1:404610535834:web:c79f6ca03e683aaa3aea23"
+};
+  // Firebase ഇനിഷ്യലൈസ് ചെയ്യുക
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+
+</body>
+</html>

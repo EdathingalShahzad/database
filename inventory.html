@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- inventory.html, sales.html എന്നിവയുടെ <head> ൽ ചേർക്കുക -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <style>
+        body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1, h2, h3 {
+    color: #333;
+}
+
+.nav-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 8px 16px;
+    background-color: #4CAF50;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.nav-link:hover {
+    background-color: #45a049;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #4CAF50;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input, select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Product Inventory Management</h1>
+        <a href="sales.html" class="nav-link">Go to Sales Page</a>
+        
+        <h2>Add New Product</h2>
+        <form id="add-product-form">
+            <div class="form-group">
+                <label for="product-name">Product Name:</label>
+                <input type="text" id="product-name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="initial-quantity">Initial Quantity:</label>
+                <input type="number" id="initial-quantity" min="0" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="product-price">Price (₹):</label>
+                <input type="number" id="product-price" step="0.01" min="0" required>
+            </div>
+            
+            <button type="submit">Add Product</button>
+        </form>
+        
+        <h2>Current Inventory</h2>
+        <table id="inventory-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Price (₹)</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Inventory items will be populated here -->
+            </tbody>
+        </table><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Product Inventory Management</h1>
+        <a href="sales.html" class="nav-link">Go to Sales Page</a>
+        
+        <h2>Add New Product</h2>
+        <form id="add-product-form">
+            <div class="form-group">
+                <label for="product-name">Product Name:</label>
+                <input type="text" id="product-name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="initial-quantity">Initial Quantity:</label>
+                <input type="number" id="initial-quantity" min="0" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="product-price">Price (₹):</label>
+                <input type="number" id="product-price" step="0.01" min="0" required>
+            </div>
+            
+            <button type="submit">Add Product</button>
+        </form>
+        
+        <h2>Current Inventory</h2>
+        <table id="inventory-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Price (₹)</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Inventory items will be populated here -->
+            </tbody>
+        </table>
+    </div>
+    
+    <script src="inventory.js"></script>
+</body>
+</html>
+    </div>
+    
+
+    <script>
+    // Initialize inventory data from localStorage
+let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+
+// DOM elements
+const inventoryTable = document.getElementById('inventory-table').getElementsByTagName('tbody')[0];
+const addProductForm = document.getElementById('add-product-form');
+
+// Function to refresh inventory data from localStorage
+function refreshInventoryData() {
+    inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+    renderInventory();
+}
+
+// Initialize the page and set up periodic refresh
+document.addEventListener('DOMContentLoaded', function() {
+    refreshInventoryData();
+    
+    // Refresh inventory every 2 seconds to catch updates from sales page
+    setInterval(refreshInventoryData, 2000);
+});
+
+// Render inventory table
+function renderInventory() {
+    inventoryTable.innerHTML = '';
+    
+    if (inventory.length === 0) {
+        const row = inventoryTable.insertRow();
+        const cell = row.insertCell(0);
+        cell.colSpan = 5;
+        cell.textContent = 'No products in inventory. Add some products to get started.';
+        return;
+    }
+    
+    inventory.forEach((product, index) => {
+        const row = inventoryTable.insertRow();
+        
+        row.insertCell(0).textContent = index + 1;
+        row.insertCell(1).textContent = product.name;
+        row.insertCell(2).textContent = product.quantity;
+        row.insertCell(3).textContent = product.price.toFixed(2);
+        
+        const actionsCell = row.insertCell(4);
+        
+        const editButton = document.createElement('button');
+        editButton.textContent = 'Edit';
+        editButton.onclick = () => editProduct(index);
+        editButton.style.marginRight = '5px';
+        actionsCell.appendChild(editButton);
+        
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.onclick = () => deleteProduct(index);
+        actionsCell.appendChild(deleteButton);
+    });
+}
+
+// ഡാറ്റ എഴുതാൻ
+function addProduct(name, quantity, price) {
+  db.collection("products").add({
+    name: name,
+    quantity: quantity,
+    price: price
+  })
+  .then(() => alert("ഉൽപ്പന്നം ചേർത്തു!"))
+  .catch(error => alert("പിശക്: " + error));
+}
+
+// ഡാറ്റ വായിക്കാൻ (റിയൽ-ടൈം അപ്ഡേറ്റ്)
+db.collection("products").onSnapshot((snapshot) => {
+  snapshot.forEach((doc) => {
+    console.log(doc.data()); // ഉൽപ്പന്നങ്ങൾ കാണിക്കും
+  });
+});
+// ... rest of your existing inventory.js code ...
+    </script>
+</body>
+</html>
